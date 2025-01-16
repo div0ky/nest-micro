@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { BookstoreApiGatewayModule } from './../src/bookstore-api-gateway.module';
+import { BookstoreApiGatewayModule } from '../src/bookstore-api-gateway.module';
 
 describe('BookstoreApiGatewayController (e2e)', () => {
   let app: INestApplication;

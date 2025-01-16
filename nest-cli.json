@@ -1,58 +1,67 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "apps/bookstore-api-gateway/src",
+  "sourceRoot": "apps/bookstore/bookstore-api-gateway/src",
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": true,
-    "tsConfigPath": "apps/bookstore-api-gateway/tsconfig.app.json"
+    "tsConfigPath": "apps/bookstore/bookstore-api-gateway/tsconfig.app.json"
   },
   "monorepo": true,
-  "root": "apps/bookstore-api-gateway",
+  "root": "apps/bookstore/bookstore-api-gateway",
   "projects": {
     "bookstore-api-gateway": {
       "type": "application",
-      "root": "apps/bookstore-api-gateway",
+      "root": "apps/bookstore/bookstore-api-gateway",
       "entryFile": "main",
-      "sourceRoot": "apps/bookstore-api-gateway/src",
+      "sourceRoot": "apps/bookstore/bookstore-api-gateway/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/bookstore-api-gateway/tsconfig.app.json"
+        "tsConfigPath": "apps/bookstore/bookstore-api-gateway/tsconfig.app.json"
       }
     },
     "users": {
       "type": "application",
-      "root": "apps/users",
+      "root": "apps/bookstore/users",
       "entryFile": "main",
-      "sourceRoot": "apps/users/src",
+      "sourceRoot": "apps/bookstore/users/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/users/tsconfig.app.json"
+        "tsConfigPath": "apps/bookstore/users/tsconfig.app.json"
       }
     },
     "books": {
       "type": "application",
-      "root": "apps/books",
+      "root": "apps/bookstore/books",
       "entryFile": "main",
-      "sourceRoot": "apps/books/src",
+      "sourceRoot": "apps/bookstore/books/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/books/tsconfig.app.json"
+        "tsConfigPath": "apps/bookstore/books/tsconfig.app.json"
       }
     },
     "contracts": {
       "type": "library",
-      "root": "libs/contracts",
+      "root": "libs/bookstore/contracts",
       "entryFile": "index",
-      "sourceRoot": "libs/contracts/src",
+      "sourceRoot": "libs/bookstore/contracts/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/contracts/tsconfig.lib.json"
+        "tsConfigPath": "libs/bookstore/contracts/tsconfig.lib.json"
       }
     },
     "prisma": {
       "type": "library",
-      "root": "libs/prisma",
+      "root": "libs/bookstore/prisma",
       "entryFile": "index",
-      "sourceRoot": "libs/prisma/src",
+      "sourceRoot": "libs/bookstore/prisma/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/prisma/tsconfig.lib.json"
+        "tsConfigPath": "libs/bookstore/prisma/tsconfig.lib.json"
+      }
+    },
+    "test01": {
+      "type": "application",
+      "root": "apps/bookstore/test01",
+      "entryFile": "main",
+      "sourceRoot": "apps/bookstore/test01/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/bookstore/test01/tsconfig.app.json"
       }
     }
   }
