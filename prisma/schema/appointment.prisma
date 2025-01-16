@@ -1,0 +1,77 @@
+model Appointment {
+  id               String   @id @unique @default(cuid())
+  datetime         DateTime @db.Timestamp(0)
+  notes            String?  @db.Text
+  salesmanNotes    String?  @db.Text
+  status           String   @default("Call to Confirm")
+  rehashCancel     Boolean? @default(false)
+  mustRun          Boolean? @default(false)
+  salePrice        Float?
+  assignedSplit    Float?   @default(1)
+  assigned2Split   Float?   @default(0)
+  percentageOfList Float?
+  predictions      Json?    @db.Json
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  contact     Contact            @relation(fields: [contactId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  contactId   String
+  // -----
+  inquiry     Inquiry            @relation(fields: [inquiryId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  inquiryId   String
+  // -----
+  assigned    User?              @relation(name: "assigned", fields: [assignedId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  assignedId  String?
+  // -----
+  assigned2   User?              @relation(name: "assigned2", fields: [assigned2Id], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  assigned2Id String?
+  // -----
+  confirmer   User?              @relation(name: "confirmer", fields: [confirmerId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  confirmerId String?
+  // -----
+  setter      User?              @relation(name: "setter", fields: [setterId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  setterId    String?
+  // -----
+  rehasher    User?              @relation(name: "rehasher", fields: [rehasherId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  rehasherId  String?
+  // -----
+  resetter    User?              @relation(name: "resetter", fields: [resetterId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  resetterId  String?
+  // -----
+  result      AppointmentResult? @relation(fields: [resultId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  resultId    String?
+
+  // MANY 2 ONE
+  activity  Activity[]
+  jobs      Job[]
+  referrals Referral[]
+
+  @@index([datetime])
+  @@index([status])
+  @@index([resultId])
+  @@index([assignedId])
+  @@index([assigned2Id])
+  @@index([setterId])
+  @@index([confirmerId])
+  @@index([rehasherId])
+  @@index([resetterId])
+}
+
+model AppointmentResult {
+  id   String @id @unique @default(cuid())
+  name String
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  bucket   Bucket? @relation(fields: [bucketId], references: [id])
+  bucketId String?
+
+  // MANY 2 ONE
+  appointments Appointment[]
+}

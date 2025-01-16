@@ -1,0 +1,152 @@
+model User {
+  id                String    @id @unique @default(cuid())
+  authId            String?   @unique
+  eid               String    @default("0000")
+  firstName         String
+  lastName          String
+  name              String?
+  initials          String?
+  phone             String?
+  email             String    @unique
+  password          String
+  otp               String?
+  avatar            String?   @db.Text
+  street            String?
+  city              String?
+  state             String?
+  zip               String?
+  atHomeshow        Boolean   @default(false)
+  homeshowId        String?
+  role              String    @default("user")
+  token             String?   @unique @default(uuid())
+  timezone          String?   @default("America/Chicago")
+  active            Boolean   @default(true)
+  fullTimeStartDate DateTime?
+  startDate         DateTime?
+  endDate           DateTime?
+  lastKnownGeo      Json?
+
+  // call center
+  callCenter              Boolean @default(false)
+  bucketAssignmentsLocked Boolean @default(true)
+
+  // require password change on next login
+  forcePasswordChange Boolean @default(true)
+
+  // canvass specific
+  canvassDivision String?
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // settings / preferences
+  permitSms Boolean @default(false)
+  mobile    String?
+
+  // ONE 2 MANY
+  branch                     Branch?   @relation(fields: [branchTag], references: [tag])
+  branchTag                  String?
+  preferredBranchTag         String?
+  group                      UserGroup @relation(fields: [groupId], references: [id])
+  groupId                    String    @default("clcqd78b30000bjv6qv4750zo")
+  defaultContactFilterId     String?
+  defaultJobFilterId         String?
+  defaultAppointmentFilterId String?
+
+  recruitedBy   User?   @relation(name: "recruitedBy", fields: [recruitedById], references: [id])
+  recruitedById String?
+
+  // MANY 2 MANY
+  products              Product[]
+  productDivisions      ProductDivision[]
+  permissions           UserPermission[]
+  seenContactMessages   ContactMessage[]   @relation(name: "seenContactMessages")
+  seenInstallerMessages InstallerMessage[] @relation(name: "seenInstallerMessages")
+
+  lockedContacts Contact[] @relation(name: "lockedBy")
+  callbacks      Contact[] @relation(name: "callbackUser")
+
+  assignedBranches Branch[] @relation(name: "assignedBranches")
+  assignedBuckets  Bucket[] @relation(name: "assignedBuckets")
+
+  helpdeskCommentLikes HelpTicketComment[] // liked comments on helpdesk tickets
+
+  // MANY 2 ONE
+  assignedAppointments  Appointment[]       @relation(name: "assigned")
+  assigned2Appointments Appointment[]       @relation(name: "assigned2")
+  confirmerAppointments Appointment[]       @relation(name: "confirmer")
+  setterAppointments    Appointment[]       @relation(name: "setter")
+  rehasherAppointments  Appointment[]       @relation(name: "rehasher")
+  resetterAppointments  Appointment[]       @relation(name: "resetter")
+  callRecords           CallRecord[]
+  activity              Activity[]
+  contactComments       ContactComment[]
+  jobComments           JobComment[]
+  recruits              User[]              @relation(name: "recruitedBy")
+  contactMessages       ContactMessage[]
+  installerMessages     InstallerMessage[]
+  tertiaryInquiries     Inquiry[]           @relation(name: "tertiarySource")
+  lastContactRecords    Job[] // This user last contacted these jobs
+  rehashedJobs          ReleasedActivity[] // salesman id marked for being rehasher
+  appointmentFilters    AppointmentFilter[]
+  jobFilters            JobFilter[]
+  reminders             UserReminder[]
+
+  serviceTicketsTech         ServiceTicket[] @relation(name: "techAssigned") // assigned tech
+  assignedTechServiceTickets ServiceTicket[] @relation(name: "assignedTechs") // assigned techs
+  serviceTicketsAdmin        ServiceTicket[] @relation(name: "adminAssigned") // created by admin
+  createdServiceTickets      ServiceTicket[] @relation(name: "serviceTicketCreatedBy") // created by user
+
+  createdHelpTickets HelpTicket[] @relation(name: "helpTicketCreator") // created by user
+  requestedHelpTickets HelpTicket[] @relation(name: "helpTicketRequester") // requested by user
+  assignedHelpTickets HelpTicket[] @relation(name: "helpTicketAssignedAgents") // assigned agents
+  helpTicketComments HelpTicketComment[] @relation(name: "helpTicketCommentAuthor") // comments this user authored
+  
+  createdDocuments      Document[]
+  phoneCalls            CallInstance[]
+  callGroups            CallGroup[]
+  salesQuarterlyReviews SalesQuarterlyReview[]
+  helpTicketAttachments HelpTicketAttachment[]
+  downloads             UserDownload[]
+}
+
+model UserGroup {
+  id   String @id @unique @default(cuid())
+  name String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // MANY 2 ONE
+  users User[]
+
+  // MANY 2 MANY
+  permissions UserPermission[]
+}
+
+model UserPermission {
+  id       String @id @unique @default(cuid())
+  resource String
+  action   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // MANY 2 MANY
+  users  User[]
+  groups UserGroup[]
+}
+
+model UserDownload {
+  id        String @id @unique @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status   String  @default("Pending")
+  fileName String
+  fileUrl  String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}

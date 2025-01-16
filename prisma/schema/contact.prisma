@@ -1,0 +1,93 @@
+model Contact {
+  id               String   @id @unique @default(cuid())
+  firstName        String   @default("-")
+  lastName         String   @default("-")
+  name             String?
+  spouse           String?
+  email            String?
+  email2           String?
+  phone            String?
+  phone2           String?
+  street           String?
+  city             String?
+  state            String?
+  zip              String?
+  lat              Float?
+  lng              Float?
+  geodata          Json?    @db.Json
+  propertyData     Json?    @db.Json
+  type             String   @default("Prospect")
+  platform         String?  @default("Evergreen")
+  token            String?  @unique @default(cuid())
+  latestCallResult String?
+  satisfied        Boolean?
+  permitSms        Boolean  @default(false)
+
+  // Telemarketing Fields
+  hvv               String?   @default("Not Checked")
+  stickyNote        String?   @default("-") @db.VarChar(5000)
+  returnNotes       String?   @default("-") @db.VarChar(5000)
+  totalCalls        Int       @default(0)
+  bucketCalls       Int       @default(0)
+  lastCall          DateTime  @default(now())
+  nextCall          DateTime  @default(now())
+  callback          DateTime?
+  locked            Boolean   @default(false)
+  previousCustomer  Boolean   @default(false)
+  latestAppointment DateTime?
+  enteredBucket     DateTime?
+  lockedDate        DateTime?
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  branch         Branch  @relation(fields: [branchTag], references: [tag])
+  branchTag      String
+  // ---
+  bucket         Bucket  @relation(fields: [bucketId], references: [id])
+  bucketId       String  @default("1")
+  // ---
+  callbackUser   User?   @relation(name: "callbackUser", fields: [callbackUserId], references: [id])
+  callbackUserId String?
+  // ---
+  lockedBy       User?   @relation(name: "lockedBy", fields: [lockedById], references: [id])
+  lockedById     String?
+
+  // MANY 2 ONE
+  callRecords  CallRecord[]
+  appointments Appointment[]
+  inquiries    Inquiry[]
+  activity     Activity[]
+  messages     ContactMessage[]
+  comments     ContactComment[]
+  jobs         Job[]
+  phoneCalls   CallInstance[]
+  referrals    Referral[]       @relation(name: "referrer")
+  referred_by  Referral?        @relation(name: "referred")
+
+  @@index([bucketId, phone])
+  @@index([branchTag])
+  @@index([nextCall])
+  @@index([lastCall])
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
+model ContactComment {
+  id     String  @id @default(cuid())
+  body   String  @db.Text
+  public Boolean @default(false)
+
+  // ONE 2 MANY
+  contact   Contact @relation(fields: [contactId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  contactId String
+  // -----
+  author    User?   @relation(fields: [authorId], references: [id])
+  authorId  String?
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

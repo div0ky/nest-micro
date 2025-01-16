@@ -1,0 +1,24 @@
+model Referral {
+    id        String   @id @unique @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    external_id      String?  @unique
+    qualified        Boolean @default(false)
+    qualified_payout Int?
+    sold             Boolean @default(false)
+    sold_payout      Int?
+
+    // ONE 2 MANY
+    appointment   Appointment @relation(fields: [appointmentId], references: [id])
+    appointmentId String
+
+    inquiry   Inquiry @relation(fields: [inquiryId], references: [id])
+    inquiryId String
+
+    referrer   Contact @relation(name: "referrer", fields: [referrerId], references: [id])
+    referrerId String
+
+    referred Contact @relation(name: "referred", fields: [referredId], references: [id])
+    referredId String @unique
+}

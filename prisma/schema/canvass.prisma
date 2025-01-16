@@ -1,0 +1,63 @@
+model CanvassDoor {
+  id               Int      @id @default(autoincrement())
+  slug             String   @unique @default(cuid())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  lat              Float
+  lng              Float
+  name             String
+  mostRecentResult String
+  mostRecentUser   String?
+  address          String?
+  product          String[]
+  branch           String?
+  secondary        String?
+
+  knocks           CanvassKnock[]
+}
+
+model CanvassKnock {
+  id        Int    @id @default(autoincrement())
+  tag       String
+  userId    String
+  createdAt DateTime @default(now())
+  result    String
+  notes     String?
+  product   String[]
+  branch    String?
+  secondary String?
+
+  // one to many
+  door   CanvassDoor @relation(fields: [doorId], references: [id])
+  doorId Int
+
+  @@index([doorId])
+}
+
+model Location {
+  id               Int      @id @default(autoincrement())
+  slug             String   @unique @default(cuid())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  tag              String
+  lat              Float
+  lng              Float
+  accuracy         Int     @default(0)
+  altitude         Int     @default(0)
+  altitudeAccuracy Int     @default(0)
+  bearing          Float   @default(0)
+  simulated        Boolean @default(false)
+  speed            Float   @default(0)
+  userId           String
+
+  @@index([userId])
+}
+
+model CanvassSnapshot {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  date      DateTime
+  report    Json
+
+  @@index([date])
+}

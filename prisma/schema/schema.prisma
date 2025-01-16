@@ -1,0 +1,662 @@
+// schema.prisma
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins", "driverAdapters", "prismaSchemaFolder", "fullTextSearchPostgres"]
+  binaryTargets   = ["native", "rhel-openssl-1.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== Contact ====================
+
+model Inquiry {
+  id              String  @id @unique @default(cuid())
+  primarySource   String
+  secondarySource String
+  jobAddress      String
+  cvcb            String?
+  leadId          String?
+  discount        String?
+
+  // MANY 2 MANY
+  products Product[]
+
+  // ONE 2 MANY
+  contact          Contact @relation(fields: [contactId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  contactId        String
+  // -----
+  tertiarySource   User?   @relation(name: "tertiarySource", fields: [tertiarySourceId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  tertiarySourceId String?
+
+  // MANY 2 ONE
+  callRecords  CallRecord[]
+  appointments Appointment[]
+  activity     Activity[]
+  jobs         Job[]
+  referrals    Referral[]
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Folder {
+  id              String    @id @unique @default(cuid())
+  cash            Boolean   @default(false)
+  expectedCash    Float?
+  expectedLoan    Float?
+  lender          String?
+  loanApprovedFor String?
+  loanExpiration  DateTime?
+  loanNumber      String?
+  loanRate        String?
+  loanStatus      String?   @default("Pending")
+  method          String?   @default("CASH")
+  loanTerm        String?
+  contractPrice   Float?
+  notes           String?   @db.Text
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // MANY 2 ONE
+  payments Payment[]
+  jobs     Job[]
+}
+
+model Payment {
+  id          String   @id @unique @default(cuid())
+  amount      Decimal  @db.Decimal(13, 2)
+  date        DateTime @default(now())
+  description String?  @db.Text
+  method      String?
+  applyTo     String?  @default("FINANCING")
+
+  // ONE 2 MANY
+  folder   Folder @relation(fields: [folderId], references: [id])
+  folderId String
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Bucket {
+  id                String  @id @unique @default(cuid())
+  name              String
+  notes             String?
+  urgent            Boolean @default(false)
+  weight            Int     @default(1)
+  delay             Int     @default(0)
+  delayUnit         String  @default("days")
+  unlimitedAttempts Boolean @default(false)
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // MANY 2 MANY
+  assignedTelemarketers User[]   @relation(name: "assignedBuckets")
+  nextBuckets           Bucket[] @relation(name: "nextBuckets")
+
+  // ONE 2 MANY
+  nextBucket   Bucket? @relation(name: "nextBuckets", fields: [nextBucketId], references: [id], onUpdate: Cascade, onDelete: SetNull)
+  nextBucketId String?
+
+  // MANY 2 ONE
+  callRules          CallRule[]
+  contacts           Contact[]
+  callResults        CallResult[]        @relation(name: "bucket")
+  callResultsNext    CallResult[]        @relation(name: "nextBucket")
+  appointmentResults AppointmentResult[]
+  jobStatuses        JobStatus[]
+}
+
+model CallRule {
+  id      String @id @unique @default(cuid())
+  type    String
+  days    Int    @default(0)
+  hours   Int    @default(0)
+  minutes Int    @default(0)
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  bucket   Bucket @relation(fields: [bucketId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  bucketId String
+}
+
+model CallResult {
+  id                String  @id @unique @default(cuid())
+  name              String
+  notes             String?
+  weight            Int     @default(1)
+  appointmentStatus String?
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // call center
+  bucketDelay      Boolean? @default(false)
+  bucketDelayCalls Int?     @default(1)
+  callDelay        Int?     @default(1)
+  callDelayUnit    String?  @default("hours")
+
+  // ONE 2 MANY
+  bucket       Bucket       @relation(name: "bucket", fields: [bucketId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  bucketId     String
+  // -----
+  nextBucket   Bucket?      @relation(name: "nextBucket", fields: [nextBucketId], references: [id], onUpdate: Cascade, onDelete: SetNull)
+  nextBucketId String?
+  // MANY 2 ONE
+  callRecords  CallRecord[]
+}
+
+model CallRecord {
+  id        String   @id @unique @default(cuid())
+  notes     String?  @db.Text
+  returned  Boolean? @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  callResult   CallResult @relation(fields: [callResultId], references: [id])
+  callResultId String
+  // ---
+  contact      Contact    @relation(fields: [contactId], references: [id])
+  contactId    String
+  // ---
+  user         User?      @relation(fields: [userId], references: [id])
+  userId       String?
+  // ---
+  inquiry      Inquiry?   @relation(fields: [inquiryId], references: [id])
+  inquiryId    String?
+
+  @@index([createdAt])
+  @@index([callResultId])
+  @@index([contactId])
+}
+
+model CallInstance {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  duration      Int     @default(0)
+  callId        String  @unique
+  recordingUrl  String?
+  transcriptUrl String?
+  disposition   String?
+  campaignId    String?
+  campaignName  String?
+  notes         String? @db.Text
+
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String
+  contact   Contact @relation(fields: [contactId], references: [id])
+  contactId String
+}
+
+model PhoneNumber {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  phone      String  @unique
+  totalCalls Int     @default(0)
+  name       String
+  archived   Boolean @default(false)
+
+  callGroup   CallGroup? @relation(fields: [callGroupId], references: [id])
+  callGroupId String?
+  branch      Branch     @relation(fields: [branchTag], references: [tag])
+  branchTag   String
+}
+
+model CallGroup {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name String
+
+  phoneNumbers PhoneNumber[]
+  users        User[]
+}
+
+model ChangeOrder {
+  id         String   @id @unique @default(cuid())
+  date       DateTime @default(now())
+  adjustment Float
+  notes      String?  @db.Text
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  job   Job    @relation(fields: [jobId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  jobId String
+}
+
+model ReleasedActivity {
+  id            String    @id @unique @default(cuid())
+  month         String?
+  year          String?
+  effectiveDate DateTime? @db.Timestamp(0)
+  type          String    @default("Released")
+  notes         String?   @db.Text
+  freebie       Boolean   @default(false)
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  job        Job     @relation(fields: [jobId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  jobId      String
+  // -----
+  salesman   User?   @relation(fields: [salesmanId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  salesmanId String?
+}
+
+model Activity {
+  id          String  @id @unique @default(cuid())
+  type        String
+  event       Boolean @default(false)
+  description String  @db.Text
+  notes       String? @db.Text
+  url         String? @db.Text
+  urlText     String? @db.Text
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  user          User?        @relation(fields: [userId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  userId        String?
+  // -----
+  contact       Contact?     @relation(fields: [contactId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  contactId     String?
+  // -----
+  inquiry       Inquiry?     @relation(fields: [inquiryId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  inquiryId     String?
+  // -----
+  job           Job?         @relation(fields: [jobId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  jobId         String?
+  // -----
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  appointmentId String?
+}
+
+model ServiceTicket {
+  id               String    @id @unique @default(cuid())
+  status           String    @default("New")
+  type             String
+  title            String    @default("Service Ticket") @db.VarChar(250)
+  notes            String?   @db.Text
+  techNotes        String?   @db.Text
+  scheduledDate    DateTime?
+  scheduledEndDate DateTime?
+  completedDate    DateTime?
+  requestedDate    DateTime?
+  paymentStatus    String?
+  amountDue        Decimal?  @db.Decimal(13, 2)
+
+  // meta fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  assignedTech        User?      @relation(name: "techAssigned", fields: [assignedTechId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  assignedTechId      String?
+  // -----
+  assignedInstaller   Installer? @relation(fields: [assignedInstallerId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  assignedInstallerId String?
+  // -----
+  createdBy           User?      @relation(name: "serviceTicketCreatedBy", fields: [createdById], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  createdById         String?
+  // -----
+  admin               User?      @relation(name: "adminAssigned", fields: [adminId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  adminId             String?
+  // -----
+  job                 Job?       @relation(fields: [jobId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  jobId               String
+
+  assignedTechs User[] @relation(name: "assignedTechs")
+
+  @@index([scheduledDate])
+  @@index([completedDate])
+  @@index([status])
+  @@index([type])
+  @@index([adminId])
+}
+
+model AppointmentFilter {
+  id      String  @id @unique @default(cuid())
+  name    String
+  payload Json    @db.Json
+  public  Boolean @default(false)
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  createdBy   User   @relation(fields: [createdById], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  createdById String
+}
+
+model JobFilter {
+  id      String  @id @unique @default(cuid())
+  name    String
+  payload Json    @db.Json
+  public  Boolean @default(false)
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  createdBy   User   @relation(fields: [createdById], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  createdById String
+}
+
+model ContactFilter {
+  id      String  @id @unique @default(cuid())
+  name    String
+  payload Json    @db.Json
+  public  Boolean @default(false)
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // MANY 2 MANY
+  userIds String[]
+
+  // ONE 2 MANY
+  createdById String?
+}
+
+model ColumnPreset {
+  id      String  @id @unique @default(cuid())
+  name    String
+  columns Json    @db.Json
+  public  Boolean @default(false)
+  type    String
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  createdById String?
+}
+
+model SalesmanStatsSnapshot {
+  // meta
+  id        String   @id @unique @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // fields
+  sales           Float? @default(0)
+  salesPercent    Float? @default(0) // sales / ran
+  leadsIssued     Float? @default(0) // appointments - ( call & cancel - CC No Reset )
+  released        Float? @default(0)
+  releasedPercent Float? @default(0) // released / written
+  written         Float? @default(0) // sale price? contract price?
+  demos           Float? @default(0) // sales + pitch & miss
+  demoPercent     Float? @default(0) // demos / leadsIssued
+  closePercent    Float? @default(0) // sales / demos
+  showWork        Json?  @db.Json
+
+  // ONE 2 MANY
+  salesmanId String
+}
+
+model ServicePayment {
+  id          String   @id @unique @default(cuid())
+  amount      Float
+  date        DateTime @default(now())
+  description String?  @db.Text
+  method      String?
+
+  // ONE 2 MANY
+  serviceTicketId String
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InquiryAttachment {
+  id        String   @id @unique @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // fields
+  name String @db.Text
+  url  String @db.Text
+  path String @db.Text
+
+  inquiryId String
+}
+
+model ServiceAttachment {
+  id        String   @id @unique @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // fields
+  name String @db.Text
+  url  String @db.Text
+  path String @db.Text
+
+  serviceId String
+}
+
+// ==================== Client Portal ====================
+
+model ContactMessage {
+  id         String    @id @default(cuid())
+  body       String    @db.Text
+  read       Boolean   @default(false)
+  clientRead DateTime?
+
+  // ONE 2 MANY
+  user      User?   @relation(fields: [userId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  userId    String? // Author & Sender
+  // -----
+  contact   Contact @relation(fields: [contactId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  contactId String
+
+  // MANY 2 ONE
+  emailEvents ContactEmailEvent[]
+
+  // MANY 2 MANY
+  seenBy User[] @relation(name: "seenContactMessages")
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContactEmailEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // fields
+  externalId String?
+  type       String
+  timestamp  DateTime?
+  email      String?
+
+  // ONE 2 MANY
+  ContactMessage ContactMessage? @relation(fields: [messageId], references: [id])
+  messageId      String
+}
+
+// ==================== Installer Portal ====================
+
+model InstallerMessage {
+  id         String    @id @default(cuid())
+  body       String    @db.Text
+  read       Boolean   @default(false)
+  clientRead DateTime?
+
+  // ONE 2 MANY
+  user        User?     @relation(fields: [userId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  userId      String? // Author & Sender
+  // -----
+  installer   Installer @relation(fields: [installerId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  installerId String
+
+  // MANY 2 MANY
+  seenBy User[] @relation(name: "seenInstallerMessages")
+
+  // ONE 2 MANY
+  emailEvents InstallerEmailEvent[]
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InstallerEmailEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // fields
+  externalId String?
+  type       String
+  timestamp  DateTime?
+  email      String?
+
+  message   InstallerMessage? @relation(fields: [messageId], references: [id])
+  messageId String
+}
+
+// ==================== Notification System ====================
+
+model UserNotification {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type String
+  body String  @db.Text
+  url  String  @default("#") @db.VarChar(1000)
+  seen Boolean @default(false)
+  read Boolean @default(false)
+
+  // ONE 2 MANY
+  recipientId String
+}
+
+model LeadSource {
+  // meta
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // fields
+  name String
+  type String @default("Primary")
+}
+
+model UserReminder {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  body    String   @db.Text
+  dueDate DateTime
+
+  // ONE 2 MANY
+  recipient   User   @relation(fields: [recipientId], references: [id])
+  recipientId String
+}
+
+model SatisfactionSurvey {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // fields
+  questions Json @db.Json
+  overall   Int
+
+  // ONE 2 MANY
+  contactId String
+  jobId     String
+}
+
+model SalesQuarterlyReview {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  description String
+  quarter     Int
+  year        Int
+
+  // 0, 50, 100 scale
+  growthOriented        Int
+  gratitude             Int
+  positiveCharacter     Int
+  dedication            Int
+  initiative            Int
+  trust                 Int
+  // 1, 2, 3 scale
+  strongPresence        Int
+  getsIt                Int
+  wantsIt               Int
+  capacityToDoIt        Int
+  listening             Int
+  closing               Int
+  people                Int
+  communication         Int
+  consistency           Int
+  connectability        Int
+  organization          Int
+  paperWork             Int
+  goalAchievement       Int
+  demoPercent           Int
+  closePercent          Int
+  salesPercent          Int
+  releasedPerLeadIssued Int
+  profitPercent         Int
+  meetingsInvolvement   Int
+  jobSiteVisits         Int
+  referrals             Int
+  product               Int
+  competition           Int
+  localIndustry         Int
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model RegalMigration {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  title          String @db.Text
+  status         String @default("Pending")
+  requestedCount Int
+  migratedCount  Int?
+}

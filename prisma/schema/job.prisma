@@ -1,0 +1,125 @@
+model Job {
+  id                           String    @id @unique @default(cuid())
+  startDate                    DateTime?
+  orderDate                    DateTime?
+  breakLow                     Boolean?  @default(false)
+  buildYear                    String?
+  completionDate               DateTime?
+  contractPrice                Float?
+  digriteCompleted             DateTime?
+  digriteExpiration            DateTime?
+  hoaStatus                    String?
+  lastContact                  DateTime?
+  leadStatus                   String?   @default("Unknown")
+  measureDate                  DateTime?
+  netDate                      DateTime?
+  number                       String?
+  permitStatus                 String?
+  salePrice                    Float?
+  statusUpdatedAt              DateTime  @default(now())
+  iviOrderDate                 DateTime?
+  inspectionDate               DateTime?
+  finalInspectionDate          DateTime?
+  finalInspectionNotApplicable Boolean   @default(false)
+  framingInspectionDate        DateTime?
+  footerInspectionDate         DateTime?
+  inspectionStatus             String?
+  stickyNote                   String?   @default("-") @db.VarChar(5000)
+  belongsToHouse               Boolean?  @default(false)
+  giveToHouse                  DateTime?
+  materialDeliveryDate         DateTime?
+
+  // maybe removed
+  releasedMonth Int?
+  releasedYear  Int?
+  rescindedDate DateTime?
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // MANY 2 ONE
+  comments         JobComment[]
+  activity         Activity[]
+  changeOrders     ChangeOrder[]
+  releasedActivity ReleasedActivity[]
+  serviceTickets   ServiceTicket[]
+
+  // MANY 2 MANY
+  installers Installer[]
+
+  // ONE 2 MANY
+  contact           Contact     @relation(fields: [contactId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  contactId         String
+  // -----
+  appointment       Appointment @relation(fields: [appointmentId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  appointmentId     String
+  // -----
+  inquiry           Inquiry     @relation(fields: [inquiryId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  inquiryId         String
+  // -----
+  folder            Folder?     @relation(fields: [folderId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  folderId          String?
+  // -----
+  product           Product     @relation(fields: [productId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  productId         String
+  // -----
+  status            JobStatus   @relation(fields: [statusId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  statusId          String      @default("1")
+  // -----
+  lastContactedBy   User?       @relation(fields: [lastContactedById], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  lastContactedById String?
+
+  @@index([lastContact])
+  @@index([statusId])
+  @@index([startDate])
+  @@index([measureDate])
+  @@index([netDate])
+}
+
+model JobStatus {
+  id         String  @id @unique @default(cuid())
+  name       String
+  officeOnly Boolean @default(false)
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ONE 2 MANY
+  nextBucket   Bucket? @relation(fields: [nextBucketId], references: [id])
+  nextBucketId String?
+
+  // MANY 2 ONE
+  jobs Job[]
+}
+
+model JobComment {
+  id     String  @id @default(cuid())
+  body   String  @db.Text
+  public Boolean @default(false)
+
+  // ONE 2 MANY
+  job      Job    @relation(fields: [jobId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  jobId    String
+  // -----
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+
+  // meta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model JobAttachment {
+  id        String   @id @unique @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // fields
+  name String @db.Text
+  url  String @db.Text
+  path String @db.Text
+
+  jobId String
+}

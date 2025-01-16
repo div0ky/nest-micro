@@ -1,0 +1,193 @@
+// prisma/schema.prisma
+model TechnicalDebtItem {
+    id                  String              @id @default(uuid())
+    name                String
+    currentVersion      String
+    targetVersion       String
+    status              MigrationStatus
+    severity            DebtSeverity
+    impactAreas         ImpactArea[]
+    changeType          ChangeType
+    createdAt           DateTime            @default(now())
+    updatedAt           DateTime            @updatedAt
+    plannedRemovalDate  DateTime
+    actualRemovalDate   DateTime?
+    migrationProgress   Float?
+    migrationStartDate  DateTime?
+    migrationEndDate    DateTime?
+    description         String
+    migrationGuideUrl   String?
+    reasonForChange     String
+    risks               Risk[]
+    mitigationSteps     MitigationStep[]
+    metrics             Metrics?
+    owner               Owner               @relation(fields: [ownerId], references: [id])
+    ownerId             String
+    dependencies        FeatureDependency[]
+    affectedFiles       AffectedFile[]
+    featureFlags        String[]
+
+    @@index([status])
+    @@index([severity])
+}
+
+model Owner {
+    id               String              @id @default(uuid())
+    team             String
+    primaryContact   String
+    secondaryContact String?
+    slackChannel     String?
+    debtItems        TechnicalDebtItem[]
+}
+
+model FeatureDependency {
+    id          String            @id @default(uuid())
+    featureName String
+    version     String
+    type        DependencyType
+    notes       String?
+    debtItem    TechnicalDebtItem @relation(fields: [debtItemId], references: [id])
+    debtItemId  String
+
+    @@index([featureName])
+}
+
+model Risk {
+    id          String            @id @default(uuid())
+    description String
+    debtItem    TechnicalDebtItem @relation(fields: [debtItemId], references: [id])
+    debtItemId  String
+}
+
+model Metrics {
+    id                String            @id @default(uuid())
+    userImpact        Float
+    performanceBefore Float?
+    performanceAfter  Float?
+    performanceMetric String?
+    maintenanceBefore Float?
+    maintenanceAfter  Float?
+    debtItem          TechnicalDebtItem @relation(fields: [debtItemId], references: [id])
+    debtItemId        String            @unique
+}
+
+model MitigationStep {
+  id          String           @id @default(uuid())
+  description String
+  status      MitigationStatus @default(PLANNED)
+  assignee    String?
+  dueDate     DateTime?
+  completedAt DateTime?
+  notes       String?
+  debtItem    TechnicalDebtItem @relation(fields: [debtItemId], references: [id])
+  debtItemId  String
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+model AffectedFile {
+  id          String           @id @default(uuid())
+  path        String
+  lineCount   Int?
+  changeType  FileChangeType
+  status      FileStatus       @default(PENDING)
+  priority    FilePriority     @default(MEDIUM)
+  
+  // Git-related info
+  lastCommit  String?
+  lastAuthor  String?
+  lastModified DateTime?
+  
+  // Migration tracking
+  migrationStatus MigrationStatus @default(PENDING)
+  migratedAt     DateTime?
+  migratedBy     String?
+  
+  // Relations
+  debtItem    TechnicalDebtItem @relation(fields: [debtItemId], references: [id])
+  debtItemId  String
+  
+  // Dependencies between files
+  dependencies    AffectedFile[] @relation("FileDependencies")
+  dependents     AffectedFile[] @relation("FileDependencies")
+  
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([debtItemId, path])
+  @@index([status])
+  @@index([path])
+  @@index([migrationStatus])
+}
+
+
+enum MigrationStatus {
+    PENDING
+    IN_PROGRESS
+    COMPLETED
+    DEPRECATED
+}
+
+enum DebtSeverity {
+    LOW
+    MEDIUM
+    HIGH
+    URGENT
+}
+
+enum ImpactArea {
+    PERFORMANCE
+    SECURITY
+    MAINTENANCE
+    USER_EXPERIENCE
+    ACCESSIBILITY
+    SCALABILITY
+}
+
+enum ChangeType {
+    REFACTOR
+    REDESIGN
+    ARCHITECTURE
+    API_CHANGE
+}
+
+enum DependencyType {
+    HARD
+    SOFT
+}
+
+enum FileChangeType {
+  MODIFY      // File needs modification
+  DELETE      // File will be deleted
+  MOVE        // File will be moved
+  REPLACE     // File will be completely replaced
+  SPLIT       // File will be split into multiple files
+  MERGE       // File will be merged with others
+}
+
+enum FileStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  COMPLETED
+  BLOCKED
+}
+
+enum FilePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum MitigationStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}

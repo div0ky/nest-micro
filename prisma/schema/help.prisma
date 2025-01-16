@@ -1,0 +1,150 @@
+// ==================== ACTUAL ====================
+model HelpTicket {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ==================== FIELDS ====================
+  refid          String    @unique
+  title          String
+  description    String    @db.Text
+  summary        String?   @db.Text
+  old_status     String    @default("New")
+  agentUpdatedAt DateTime?
+  userUpdatedAt  DateTime?
+  category       String    @default("Helpdesk")
+  archived       Boolean   @default(false)
+  rejected       Boolean   @default(false)
+  onHold         Boolean   @default(false)
+  priority       Int       @default(2)
+  size           Int       @default(2)
+  snoozedUntil   DateTime?
+  type           Int       @default(2)
+  perceivedValue Int       @default(3)
+  smartPriority  Boolean   @default(true)
+
+  // ==================== METRICS ====================
+  startedAt       DateTime? // when the ticket was moved to an 'in progress' state
+  closedAt        DateTime? // when the ticket was moved to closed
+  statusChangedAt DateTime? @default(now()) // when the ticket last changed statuses
+  velocity        Float     @default(1.0) // in x.yz format
+  timeHeld        Int       @default(0) // in minutes
+  totalTime       Int       @default(0) // in minutes
+  estimatedTime   Int       @default(0) // in minutes
+  holdStartedAt   DateTime? // when the ticket was placed on hold last
+
+  // ==================== ONE TO MANY ====================
+  creator   User   @relation(name: "helpTicketCreator", fields: [creatorId], references: [id])
+  creatorId String
+
+  requester   User   @relation(name: "helpTicketRequester", fields: [requesterId], references: [id])
+  requesterId String
+
+  status   HelpTicketStatus @relation(fields: [statusId], references: [id])
+  statusId String           @default("clxwbf4cz00001h3ohr3unb3u")
+
+  epic   HelpTicketEpic? @relation(fields: [epicId], references: [id])
+  epicId String?
+
+  // ==================== MANY TO ONE ====================
+  comments    HelpTicketComment[]
+  attachments HelpTicketAttachment[]
+
+  // ==================== MANY TO MANY ====================
+  assignedAgents User[] @relation(name: "helpTicketAssignedAgents")
+
+  @@index([priority])
+  @@index([estimatedTime])
+  @@index([type])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([statusId])
+  @@index([requesterId])
+  @@index([creatorId])
+}
+
+// ==================== COMMENTS ====================
+model HelpTicketComment {
+  // ==================== META ====================
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ==================== FIELDS ====================
+  body   String  @db.Text
+  public Boolean @default(false)
+
+  // ==================== ONE TO MANY ====================
+  // Ticket that the comment is attached to
+  ticket   HelpTicket @relation(fields: [ticketId], references: [id])
+  ticketId String
+
+  parentComment   HelpTicketComment? @relation(name: "CommentReplies", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  parentCommentId String?
+
+  // Person who created the comment
+  author   User   @relation(name: "helpTicketCommentAuthor", fields: [authorId], references: [id])
+  authorId String
+
+  // ==================== MANY TO ONE ====================
+  replies HelpTicketComment[] @relation(name: "CommentReplies")
+
+  // ==================== MANY TO MANY ====================
+  liked User[] // users that 'liked' the comment
+}
+
+// ==================== Stauses ====================
+
+model HelpTicketStatus {
+  // ==================== META ====================
+  id        String   @id @default(cuid())
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ==================== FIELDS ====================
+  name String
+
+  // ==================== MANY TO ONE ====================
+  tickets HelpTicket[]
+}
+
+model HelpTicketEpic {
+  // ==================== META ====================
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ==================== FIELDS ====================
+  name                String
+  ticketCount         Int       @default(0)
+  projectedTime       Float     @default(0.0)
+  velocity            Float     @default(0.0)
+  projectedCompletion DateTime?
+  completed           Boolean   @default(false)
+
+  // ==================== MANY-TO-ONE ====================
+  tickets HelpTicket[]
+}
+
+// ==================== Ticket Attachments ====================
+model HelpTicketAttachment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name            String
+  encodedFilename String?
+  url             String
+  path            String  @default("/")
+  public          Boolean @default(true)
+  type            String
+  key             String
+
+  // ==================== ONE-TO-MANY ====================
+  uploader   User   @relation(fields: [uploaderId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  uploaderId String
+
+  ticketId   String
+  helpTicket HelpTicket @relation(fields: [ticketId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+}

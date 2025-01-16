@@ -8,7 +8,7 @@ import { UsersController } from './users.controller';
   imports: [
     ClientsModule.register([
       {
-        name: 'USERS_CLIENT',
+        name: 'USERS',
         transport: Transport.RMQ,
         options: {
           urls: [
