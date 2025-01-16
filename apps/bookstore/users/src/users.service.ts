@@ -7,7 +7,7 @@ export class UsersService {
 
   async findAll() {
     return this.prisma.user.findMany({
-      take: 20,
+      take: 10,
       orderBy: { createdAt: 'desc' },
     });
   }
