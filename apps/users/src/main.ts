@@ -7,8 +7,11 @@ async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     UsersModule,
     {
-      transport: Transport.TCP,
-      options: { port: 3001 },
+      transport: Transport.RMQ,
+      options: { 
+        urls: ['amqps://lgeszetb:CKJRgZFgToy2bd5JC31liE8gT9uR3F2d@horse.lmq.cloudamqp.com/lgeszetb'],
+        queue: 'nest'
+       },
     },
   );
   await app.listen();
